@@ -1,27 +1,42 @@
 package sattar.androidnewsapp;
 
-import android.arch.persistence.room.Room;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
 import de.hdodenhof.circleimageview.CircleImageView;
+
+
 
 public class FragmentOne extends Fragment {
 
     private static final String TAG = "FragmentOne";
-    private DBContext db;
     List<News> data;
     RecyclerViewAdapter mAdapter;
 
@@ -33,10 +48,35 @@ public class FragmentOne extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         data = new ArrayList<>();
-        db = new DBContext(Room.databaseBuilder(getActivity().getApplicationContext(), AppDatabase.class, "news.db")
-                .build(), this);
-//        News nw = new News("Outworld devourer", "DotA - Defense of the Ancients", "rat", "02.10.2017");
-//        db.InsertNewsAsync(nw);
+        //http://jsonblob.com/api/jsonBlob/51f6c057-ac31-11e7-a12e-f379e8dd88b5
+
+        final Context mContext = this.getContext();
+        RequestQueue requestQueue = Volley.newRequestQueue(mContext);
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                "http://jsonblob.com/api/jsonBlob/51f6c057-ac31-11e7-a12e-f379e8dd88b5",
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try{
+                            Gson gson = new Gson();
+                            data = new ArrayList<>(Arrays.asList(gson.fromJson(String.valueOf(response), News.class)));
+                            setAdapter(data);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener(){
+                    @Override
+                    public void onErrorResponse(VolleyError error){
+                        Toast.makeText(mContext, "Request error", Toast.LENGTH_LONG);
+                    }
+                });
+
+        requestQueue.add(jsonObjectRequest);
     }
 
     @Override
@@ -45,8 +85,6 @@ public class FragmentOne extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.recycler_view, container, false);
 
-
-        db.GetDataAsync();
         //Log.d(TAG, "onCreateView: " + data.get(0).getTitle());
         RecyclerView recyclerView = view.findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));

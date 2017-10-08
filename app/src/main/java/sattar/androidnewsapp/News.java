@@ -7,17 +7,10 @@ import android.arch.persistence.room.PrimaryKey;
 
 import java.util.List;
 
-@Entity(tableName = "news")
 public class News {
-    @PrimaryKey(autoGenerate=true)
-    int Id;
-    @ColumnInfo(name = "title")
     private String title;
-    @ColumnInfo(name = "content")
     private String content;
-    @ColumnInfo(name = "image_path")
     private String imagePath;
-    @ColumnInfo(name = "date")
     private String date;
 
 
