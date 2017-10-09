@@ -3,7 +3,6 @@ package sattar.androidnewsapp;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
@@ -13,25 +12,19 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
-import com.google.gson.Gson;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import de.hdodenhof.circleimageview.CircleImageView;
+import java.util.concurrent.TimeUnit;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public class FragmentOne extends Fragment {
@@ -48,35 +41,39 @@ public class FragmentOne extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         data = new ArrayList<>();
-        //http://jsonblob.com/api/jsonBlob/51f6c057-ac31-11e7-a12e-f379e8dd88b5
 
-        final Context mContext = this.getContext();
-        RequestQueue requestQueue = Volley.newRequestQueue(mContext);
+        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
 
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                Request.Method.GET,
-                "http://jsonblob.com/api/jsonBlob/51f6c057-ac31-11e7-a12e-f379e8dd88b5",
-                null,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try{
-                            Gson gson = new Gson();
-                            data = new ArrayList<>(Arrays.asList(gson.fromJson(String.valueOf(response), News.class)));
-                            setAdapter(data);
-                        }catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                },
-                new Response.ErrorListener(){
-                    @Override
-                    public void onErrorResponse(VolleyError error){
-                        Toast.makeText(mContext, "Request error", Toast.LENGTH_LONG);
-                    }
-                });
+        OkHttpClient.Builder okHttpClient = new OkHttpClient.Builder().
+                readTimeout(60, TimeUnit.SECONDS).
+                connectTimeout(60, TimeUnit.SECONDS);
+        okHttpClient.addInterceptor(interceptor);
 
-        requestQueue.add(jsonObjectRequest);
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://jsonblob.com/api/jsonBlob/51f6c057-ac31-11e7-a12e-f379e8dd88b5/")
+                .client(okHttpClient.build())
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        ApiService service = retrofit.create(ApiService.class);
+        Call<List<News>> postCall = service.getPosts();
+
+        postCall.enqueue(new Callback<List<News>>() {
+
+            @Override
+            public void onResponse(Call<List<News>> call, retrofit2.Response<List<News>> response) {
+                if (response.isSuccessful()) {
+                    setAdapter(response.body());
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<News>> call, Throwable t) {
+
+            }
+        });
     }
 
     @Override
